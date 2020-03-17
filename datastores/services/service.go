@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-//Package service has the service models for storing the datastore service info
-package service
+//Package services has the service models for storing the datastore service info
+package services
 
 import (
 	"github.com/jinzhu/gorm"
