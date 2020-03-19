@@ -6,6 +6,9 @@
 package services
 
 import (
+	"errors"
+	"strconv"
+
 	"github.com/jinzhu/gorm"
 )
 
@@ -36,6 +39,33 @@ func GetAll(conn *gorm.DB) ([]Service, error) {
 //Get will set the info of the service for the give id from database
 func (s *Service) Get(conn *gorm.DB) error {
 	return conn.Find(s).Error
+}
+
+//Validate validates whether the given service is valid or not
+func (s Service) Validate() error {
+	if len(s.URL) == 0 {
+		return errors.New("URL can't be empty")
+	}
+	if len(s.Port) == 0 {
+		return errors.New("Port can't be empty")
+	}
+	_, err := strconv.ParseInt(s.Port, 10, 32)
+	if err != nil {
+		return errors.New("Port should be a valid number")
+	}
+	if len(s.Username) == 0 {
+		return errors.New("Username can't be empty")
+	}
+	if len(s.Password) == 0 {
+		return errors.New("Password can't be empty")
+	}
+	if len(s.Name) == 0 {
+		return errors.New("Name can't be empty")
+	}
+	if len(s.Group) == 0 {
+		return errors.New("Group can't be empty")
+	}
+	return nil
 }
 
 //Create will create a given service
