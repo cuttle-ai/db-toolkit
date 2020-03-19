@@ -27,6 +27,8 @@ type Service struct {
 	Name string
 	//Group to which the datastore belongs to classify the service
 	Group string
+	//Datasets has the number of datasets stored in the database
+	Datasets int
 }
 
 //GetAll returns the list of datastore available
@@ -75,7 +77,28 @@ func (s *Service) Create(conn *gorm.DB) error {
 
 //Update will update a given service
 func (s *Service) Update(conn *gorm.DB) error {
-	return conn.Save(s).Error
+	return conn.Model(s).Updates(map[string]interface{}{
+		"url":      s.URL,
+		"port":     s.Port,
+		"username": s.Username,
+		"password": s.Password,
+		"name":     s.Name,
+		"group":    s.Group,
+	}).Error
+}
+
+//AddDataset will add 1 to the datasets count of the service
+func (s *Service) AddDataset(conn *gorm.DB) error {
+	return conn.Model(s).Updates(map[string]interface{}{
+		"datasets": s.Datasets + 1,
+	}).Error
+}
+
+//RemoveDataset will remove 1 from the datasets count of the service
+func (s *Service) RemoveDataset(conn *gorm.DB) error {
+	return conn.Model(s).Updates(map[string]interface{}{
+		"datasets": s.Datasets - 1,
+	}).Error
 }
 
 //Delete will delete a given service
