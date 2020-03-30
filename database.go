@@ -7,6 +7,7 @@
 package toolkit
 
 import (
+	"github.com/cuttle-ai/brain/log"
 	"github.com/cuttle-ai/octopus/interpreter"
 )
 
@@ -15,5 +16,5 @@ type Datastore interface {
 	//DumpCSV will dump the given csv file to the datastore.
 	//Default behaviour of the method will be to replace the existing data in the datastore.
 	//But if appendData flag is set, then existing data won't be removed instead new data will be appended to it.
-	DumpCSV(filename string, tablename string, columns []interpreter.ColumnNode, appendData bool, logger Logger) error
+	DumpCSV(filename string, tablename string, columns []interpreter.ColumnNode, appendData bool, createTable bool, logger log.Log) error
 }

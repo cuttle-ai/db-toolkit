@@ -14,7 +14,7 @@ import (
 	//this package contains the postgres driver for cuttle to use it as a datastore. That is why the initalization done here
 	_ "github.com/lib/pq"
 
-	toolkit "github.com/cuttle-ai/db-toolkit"
+	"github.com/cuttle-ai/brain/log"
 	"github.com/cuttle-ai/octopus/interpreter"
 )
 
@@ -35,8 +35,21 @@ func NewPostgres(host, port, dbName, username, password string) (*Postgres, erro
 	return &Postgres{DB: db}, nil
 }
 
+func convertToPostgresDataType(dataType string) string {
+	switch dataType {
+	case interpreter.DataTypeString:
+		return "text"
+	case interpreter.DataTypeFloat:
+		return "float"
+	case interpreter.DataTypeDate:
+		return "date"
+	default:
+		return "text"
+	}
+}
+
 //DumpCSV will dump the given csv file to post instance
-func (p Postgres) DumpCSV(filename string, tablename string, columns []interpreter.ColumnNode, appendData bool, logger toolkit.Logger) error {
+func (p Postgres) DumpCSV(filename string, tablename string, columns []interpreter.ColumnNode, appendData bool, createTable bool, logger log.Log) error {
 	/*
 	 * First we will start a transaction for the db operation
 	 * Then we will create the table required
@@ -54,29 +67,34 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 	logger.Info("building the table to dump the csv", tablename)
 	var strB strings.Builder
 	var strC strings.Builder
-	strB.WriteString("CREATE TABLE")
+	strB.WriteString("CREATE TABLE ")
 	strB.WriteString(tablename)
 	strB.WriteString("( ")
 	strC.WriteString("(")
 	for k, col := range columns {
 		if k > 0 {
-			strB.WriteString(",")
-			strC.WriteString(",")
+			strB.WriteString(", ")
+			strC.WriteString(", ")
 		}
-		strB.WriteString(col.Name)
-		strC.WriteString(",")
+		strB.WriteString(col.Name + " " + convertToPostgresDataType(col.DataType))
+		strC.WriteString(col.Name)
 	}
 	strB.WriteString(" )")
+	strC.WriteString(" )")
 	//now executing the built query
-	_, err = tx.Exec(strB.String())
-	if err != nil {
-		logger.Error("error while creating the table", tablename, "for dumping the csv data to the datastore")
-		return err
+
+	if createTable {
+		_, err = tx.Exec(strB.String())
+		if err != nil {
+			logger.Error("error while creating the table", tablename, "for dumping the csv data to the datastore")
+			return err
+		}
 	}
 
 	//now we will dump the data to the datastore
 	logger.Info("copying the data from the csv to the table", filename, tablename)
 	qStr := fmt.Sprintf(`COPY %s %s FROM '%s' DELIMITER ',' CSV HEADER;`, tablename, strC.String(), filename)
+	logger.Info(qStr)
 	result, err := tx.Exec(qStr)
 	if err != nil {
 		logger.Error("error while dumping to the table", tablename, "from csv", filename)
