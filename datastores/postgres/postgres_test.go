@@ -31,6 +31,8 @@ func TestDumpCSV(t *testing.T) {
 		return
 	}
 
+	conn.DB.Exec("drop table if exists groceries")
+
 	err = conn.DumpCSV(testdataFile, "groceries", []interpreter.ColumnNode{
 		{Name: "item"},
 		{Name: "brand"},

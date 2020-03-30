@@ -94,7 +94,6 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 	//now we will dump the data to the datastore
 	logger.Info("copying the data from the csv to the table", filename, tablename)
 	qStr := fmt.Sprintf(`COPY %s %s FROM '%s' DELIMITER ',' CSV HEADER;`, tablename, strC.String(), filename)
-	logger.Info(qStr)
 	result, err := tx.Exec(qStr)
 	if err != nil {
 		logger.Error("error while dumping to the table", tablename, "from csv", filename)
@@ -103,6 +102,12 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 	ef, err := result.RowsAffected()
 	if err != nil {
 		logger.Error("error while getting the number of rows affected while dumping the data to the datastore")
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		logger.Error("error while commiting the changes")
 		return err
 	}
 
