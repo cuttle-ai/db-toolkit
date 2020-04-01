@@ -36,8 +36,10 @@ type Service struct {
 	Group string
 	//Datasets has the number of datasets stored in the database
 	Datasets int
-	//DatstoreType indicates the type of datastore like postgres etc
-	DatstoreType string
+	//DatastoreType indicates the type of datastore like postgres etc
+	DatastoreType string
+	//DataDirectory is the directory where the data is stored
+	DataDirectory string
 }
 
 //GetAll returns the list of datastore available
@@ -76,8 +78,11 @@ func (s Service) Validate() error {
 	if len(s.Group) == 0 {
 		return errors.New("Group can't be empty")
 	}
-	if len(s.DatstoreType) == 0 {
+	if len(s.DatastoreType) == 0 {
 		return errors.New("Type can't be empty")
+	}
+	if len(s.DataDirectory) == 0 {
+		return errors.New("Data Directory can't be empty")
 	}
 	return nil
 }
@@ -90,13 +95,14 @@ func (s *Service) Create(conn *gorm.DB) error {
 //Update will update a given service
 func (s *Service) Update(conn *gorm.DB) error {
 	return conn.Model(s).Updates(map[string]interface{}{
-		"url":      s.URL,
-		"port":     s.Port,
-		"username": s.Username,
-		"password": s.Password,
-		"name":     s.Name,
-		"group":    s.Group,
-		"type":     s.DatstoreType,
+		"url":            s.URL,
+		"port":           s.Port,
+		"username":       s.Username,
+		"password":       s.Password,
+		"name":           s.Name,
+		"group":          s.Group,
+		"datastore_type": s.DatastoreType,
+		"data_directory": s.DataDirectory,
 	}).Error
 }
 
@@ -121,7 +127,7 @@ func (s *Service) Delete(conn *gorm.DB) error {
 
 //Datastore returns the datastore associated with a service. It iwll return nil and boolean as false if the service doesn't represent a correct datastore
 func (s Service) Datastore() (toolkit.Datastore, error) {
-	if s.DatstoreType == POSTGRES {
+	if s.DatastoreType == POSTGRES {
 		ps, err := postgres.NewPostgres(s.URL, s.Port, s.Name, s.Username, s.Password)
 		if err != nil {
 			//error while creating a postgres connection
@@ -129,5 +135,5 @@ func (s Service) Datastore() (toolkit.Datastore, error) {
 		}
 		return ps, nil
 	}
-	return nil, errors.New("couldn't identify the type of service " + s.DatstoreType)
+	return nil, errors.New("couldn't identify the type of service " + s.DatastoreType)
 }
