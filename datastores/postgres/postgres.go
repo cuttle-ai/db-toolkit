@@ -114,3 +114,9 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 	logger.Info("successfully dumped the csv to the table", filename, tablename, "copied no. of rows:-", ef)
 	return nil
 }
+
+//DeleteTable deletes the table from the datastore
+func (p Postgres) DeleteTable(tablename string) error {
+	_, err := p.DB.Exec("drop table ?", tablename)
+	return err
+}

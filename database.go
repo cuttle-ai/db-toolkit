@@ -17,4 +17,6 @@ type Datastore interface {
 	//Default behaviour of the method will be to replace the existing data in the datastore.
 	//But if appendData flag is set, then existing data won't be removed instead new data will be appended to it.
 	DumpCSV(filename string, tablename string, columns []interpreter.ColumnNode, appendData bool, createTable bool, logger log.Log) error
+	//DeleteTable will delete the given table in the datastore
+	DeleteTable(tablename string) error
 }
