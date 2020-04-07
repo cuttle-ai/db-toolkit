@@ -33,7 +33,7 @@ type Postgres struct {
 
 //NewPostgres returns the postgres with active connection
 func NewPostgres(host, port, dbName, username, password, dataDumpDirectory string) (*Postgres, error) {
-	cStr := fmt.Sprintf("host=%s port=%s dbname=%s  user=%s password=%s sslmode=disable",
+	cStr := fmt.Sprintf("host=%s port=%s dbname='%s'  user=%s password=%s sslmode=disable",
 		host, port, dbName, username, password)
 	db, err := sql.Open("postgres", cStr)
 	if err != nil {
@@ -66,7 +66,7 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 	 */
 	//copying the file to the remote
 	logger.Info("copying the file to remote postgres server", p.DataDumpDirectory)
-	cm := exec.Command("scp", filename, p.DataDumpDirectory)
+	cm := exec.Command("scp", filename, p.DataDumpDirectory+"/"+tablename+".csv")
 	err := cm.Run()
 	if err != nil {
 		logger.Error("error copying the file for dumping csv to the datastore", filename, "to", p.DataDumpDirectory)
@@ -86,7 +86,7 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 	var strB strings.Builder
 	var strC strings.Builder
 	strB.WriteString("CREATE TABLE ")
-	strB.WriteString(tablename)
+	strB.WriteString(`"` + tablename + `"`)
 	strB.WriteString("( ")
 	strC.WriteString("(")
 	for k, col := range columns {
@@ -94,8 +94,8 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 			strB.WriteString(", ")
 			strC.WriteString(", ")
 		}
-		strB.WriteString(col.Name + " " + convertToPostgresDataType(col.DataType))
-		strC.WriteString(col.Name)
+		strB.WriteString("\"" + col.Name + "\" " + convertToPostgresDataType(col.DataType))
+		strC.WriteString("\"" + col.Name + "\"")
 	}
 	strB.WriteString(" )")
 	strC.WriteString(" )")
@@ -115,7 +115,7 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 		logger.Error("expected the filename to have atleast 1 part. got", len(fileNameSplitted))
 		return errors.New("expected the filename to have atleast 1 part. got " + strconv.Itoa(len(fileNameSplitted)))
 	}
-	remoteFileName := p.DataDumpDirectory + "/" + fileNameSplitted[len(fileNameSplitted)-1]
+	remoteFileName := p.DataDumpDirectory + "/" + tablename + ".csv"
 	remoteFileNameSplitted := strings.Split(remoteFileName, ":")
 	if len(remoteFileNameSplitted) < 2 {
 		logger.Error("expected the filename to have server info like user@server.com:/home/user. Couldn't find one", remoteFileName)
@@ -124,7 +124,7 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 	remoteFileNameWithoutServer := remoteFileNameSplitted[len(remoteFileNameSplitted)-1]
 
 	logger.Info("copying the data from the csv to the table", remoteFileNameWithoutServer, tablename)
-	qStr := fmt.Sprintf(`COPY %s %s FROM '%s' DELIMITER ',' CSV HEADER;`, tablename, strC.String(), remoteFileNameWithoutServer)
+	qStr := fmt.Sprintf(`COPY "%s" %s FROM '%s' DELIMITER ',' CSV HEADER;`, tablename, strC.String(), remoteFileNameWithoutServer)
 	result, err := tx.Exec(qStr)
 	if err != nil {
 		logger.Error("error while dumping to the table", tablename, "from csv", remoteFileNameWithoutServer)
@@ -157,6 +157,6 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 
 //DeleteTable deletes the table from the datastore
 func (p Postgres) DeleteTable(tablename string) error {
-	_, err := p.DB.Exec("drop table ?", tablename)
+	_, err := p.DB.Exec("drop table \"" + tablename + "\"")
 	return err
 }
