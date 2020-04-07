@@ -128,7 +128,7 @@ func (s *Service) Delete(conn *gorm.DB) error {
 //Datastore returns the datastore associated with a service. It iwll return nil and boolean as false if the service doesn't represent a correct datastore
 func (s Service) Datastore() (toolkit.Datastore, error) {
 	if s.DatastoreType == POSTGRES {
-		ps, err := postgres.NewPostgres(s.URL, s.Port, s.Name, s.Username, s.Password)
+		ps, err := postgres.NewPostgres(s.URL, s.Port, s.Name, s.Username, s.Password, s.DataDirectory)
 		if err != nil {
 			//error while creating a postgres connection
 			return nil, err

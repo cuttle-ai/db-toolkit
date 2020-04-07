@@ -23,9 +23,10 @@ func TestDumpCSV(t *testing.T) {
 	dbUsername := os.Getenv("DB_USERNAME")
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
+	dataDirectory := os.Getenv("SERVER_DATA_DUMP_DIRECTORY")
 	testdataFile := os.Getenv("TESTDATA_FILE_LOCATION")
 
-	conn, err := postgres.NewPostgres(dbHost, dbPort, dbName, dbUsername, dbPassword)
+	conn, err := postgres.NewPostgres(dbHost, dbPort, dbName, dbUsername, dbPassword, dataDirectory)
 	if err != nil {
 		t.Error("error in connecting to the datastore", err)
 		return
