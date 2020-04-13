@@ -19,4 +19,6 @@ type Datastore interface {
 	DumpCSV(filename string, tablename string, columns []interpreter.ColumnNode, appendData bool, createTable bool, logger log.Log) error
 	//DeleteTable will delete the given table in the datastore
 	DeleteTable(tablename string) error
+	//Exec can execute a query and return the response as the array of interfaces
+	Exec(query string, args ...interface{}) ([]interface{}, error)
 }

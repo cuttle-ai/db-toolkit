@@ -160,3 +160,42 @@ func (p Postgres) DeleteTable(tablename string) error {
 	_, err := p.DB.Exec("drop table \"" + tablename + "\"")
 	return err
 }
+
+//Exec will execute a query in the post gres
+func (p Postgres) Exec(query string, args ...interface{}) ([]interface{}, error) {
+	/*
+	 * We will add a db check
+	 * Then we will query the datastore
+	 * Then will iterate through the results and parse them
+	 * Finally check the erros and return
+	 */
+
+	//db check
+	if p.DB == nil {
+		//couldn't connect to the postgres since no connection available
+		return nil, errors.New("couldn't find the datastore connection to the postgres")
+	}
+
+	//datastore query
+	rows, err := p.DB.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	//iterating through the resutls and parsing the same
+	results := []interface{}{}
+	for rows.Next() {
+		var result interface{}
+		if err := rows.Scan(&result); err != nil {
+			return nil, err
+		}
+		results = append(results, result)
+	}
+
+	// Check for errors from iterating over rows.
+	if err := rows.Err(); err != nil {
+		return results, err
+	}
+	return results, nil
+}
