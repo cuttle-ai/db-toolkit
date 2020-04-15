@@ -162,7 +162,7 @@ func (p Postgres) DeleteTable(tablename string) error {
 }
 
 //Exec will execute a query in the post gres
-func (p Postgres) Exec(query string, args ...interface{}) ([]interface{}, error) {
+func (p Postgres) Exec(query string, args ...interface{}) ([]map[string]interface{}, error) {
 	/*
 	 * We will add a db check
 	 * Then we will query the datastore
@@ -184,11 +184,23 @@ func (p Postgres) Exec(query string, args ...interface{}) ([]interface{}, error)
 	defer rows.Close()
 
 	//iterating through the resutls and parsing the same
-	results := []interface{}{}
+	results := []map[string]interface{}{}
+	cols, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
 	for rows.Next() {
-		var result interface{}
-		if err := rows.Scan(&result); err != nil {
+		result := map[string]interface{}{}
+		vals := make([]interface{}, len(cols))
+		for i := 0; i < len(vals); i++ {
+			v := ""
+			vals[i] = &v
+		}
+		if err := rows.Scan(vals...); err != nil {
 			return nil, err
+		}
+		for i, v := range vals {
+			result[cols[i]] = v
 		}
 		results = append(results, result)
 	}

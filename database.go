@@ -20,5 +20,5 @@ type Datastore interface {
 	//DeleteTable will delete the given table in the datastore
 	DeleteTable(tablename string) error
 	//Exec can execute a query and return the response as the array of interfaces
-	Exec(query string, args ...interface{}) ([]interface{}, error)
+	Exec(query string, args ...interface{}) ([]map[string]interface{}, error)
 }
