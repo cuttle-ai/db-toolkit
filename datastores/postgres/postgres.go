@@ -61,6 +61,7 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 	 * We will copy the file to the remote
 	 * We will start a transaction for the db operation
 	 * Then we will create the table required
+	 * If required remove the existing data
 	 * Then we will dump the data to the datastore
 	 * Then we will remove the file from the remote
 	 */
@@ -105,6 +106,14 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 		_, err = tx.Exec(strB.String())
 		if err != nil {
 			logger.Error("error while creating the table", tablename, "for dumping the csv data to the datastore")
+			return err
+		}
+	}
+
+	if !appendData && !createTable {
+		_, err = tx.Exec("TRUNCATE TABLE \"" + tablename + "\"")
+		if err != nil {
+			logger.Error("error while truncating the table", tablename, "for replacing the csv data in the datastore")
 			return err
 		}
 	}
