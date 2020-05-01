@@ -70,7 +70,7 @@ func IdentifyDimensions(l log.Log, conn *gorm.DB, cols []models.Node, table mode
 		}
 
 		//update the dimension type if required
-		if count > 0 && count < 15 {
+		if count > 0 && count < 50 {
 			columns[i].Dimension = true
 			c, _ := colMap[columns[i].UID]
 			dimCols = append(dimCols, c.FromColumn(columns[i]))
