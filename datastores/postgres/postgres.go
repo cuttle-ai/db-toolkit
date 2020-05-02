@@ -49,7 +49,7 @@ func convertToPostgresDataType(dataType string) string {
 	case interpreter.DataTypeFloat:
 		return "float"
 	case interpreter.DataTypeDate:
-		return "date"
+		return "text"
 	default:
 		return "text"
 	}
