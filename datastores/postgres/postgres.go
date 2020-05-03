@@ -19,6 +19,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/cuttle-ai/brain/log"
+	toolkit "github.com/cuttle-ai/db-toolkit"
 	"github.com/cuttle-ai/octopus/interpreter"
 )
 
@@ -42,16 +43,37 @@ func NewPostgres(host, port, dbName, username, password, dataDumpDirectory strin
 	return &Postgres{DB: db, DataDumpDirectory: dataDumpDirectory}, nil
 }
 
-func convertToPostgresDataType(dataType string) string {
+func convertToPostgresDataType(dataType string, maskDate bool) string {
 	switch dataType {
 	case interpreter.DataTypeString:
 		return "text"
 	case interpreter.DataTypeFloat:
 		return "float"
+	case interpreter.DataTypeInt:
+		return "int"
 	case interpreter.DataTypeDate:
-		return "text"
+		if maskDate {
+			return "text"
+		} else {
+			return "date"
+		}
 	default:
 		return "text"
+	}
+}
+
+func convertFromPostgresDataType(dataType string) string {
+	switch dataType {
+	case "text":
+		return interpreter.DataTypeString
+	case "float":
+		return interpreter.DataTypeFloat
+	case "int":
+		return interpreter.DataTypeInt
+	case "date":
+		return interpreter.DataTypeDate
+	default:
+		return interpreter.DataTypeString
 	}
 }
 
@@ -95,7 +117,7 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 			strB.WriteString(", ")
 			strC.WriteString(", ")
 		}
-		strB.WriteString("\"" + col.Name + "\" " + convertToPostgresDataType(col.DataType))
+		strB.WriteString("\"" + col.Name + "\" " + convertToPostgresDataType(col.DataType, true))
 		strC.WriteString("\"" + col.Name + "\"")
 	}
 	strB.WriteString(" )")
@@ -219,4 +241,43 @@ func (p Postgres) Exec(query string, args ...interface{}) ([]map[string]interfac
 		return results, err
 	}
 	return results, nil
+}
+
+//GetColumnTypes returns the column types of the given table name
+func (p Postgres) GetColumnTypes(tableName string) ([]toolkit.Column, error) {
+	rows, err := p.DB.Query("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '" + tableName + "'")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	results := []toolkit.Column{}
+	for rows.Next() {
+		vals := make([]interface{}, 2)
+		for i := 0; i < len(vals); i++ {
+			v := ""
+			vals[i] = &v
+		}
+		if err := rows.Scan(vals...); err != nil {
+			return nil, err
+		}
+		name, _ := vals[0].(*string)
+		dataType, _ := vals[1].(*string)
+		results = append(results, toolkit.Column{Name: *name, DataType: convertFromPostgresDataType(*dataType)})
+	}
+	return results, nil
+}
+
+//ChangeColumnTypeToDate changes a given column's data type to date with the date format as provided
+func (p Postgres) ChangeColumnTypeToDate(tableName string, colName string, dateFormat string) error {
+	_, err := p.DB.Exec("ALTER TABLE \"" + tableName + "\" ALTER COLUMN \"" + colName + "\" TYPE DATE using to_date(\"" + colName + "\", '" + convertToPostgresFormat(dateFormat) + "')")
+	return err
+}
+
+func convertToPostgresFormat(dateFormat string) string {
+	convertedDateFormat := strings.Replace(dateFormat, "2006", "YYYY", 1)
+	convertedDateFormat = strings.Replace(convertedDateFormat, "1", "mm", 1)
+	convertedDateFormat = strings.Replace(convertedDateFormat, "2", "dd", 1)
+	convertedDateFormat = strings.Replace(convertedDateFormat, "Jan", "Mon", 1)
+	fmt.Println(convertedDateFormat)
+	return convertedDateFormat
 }

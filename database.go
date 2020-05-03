@@ -11,6 +11,16 @@ import (
 	"github.com/cuttle-ai/octopus/interpreter"
 )
 
+//Column holds the information about a column and its data type
+type Column struct {
+	//Name of the column
+	Name string
+	//DataType is the data type of the column
+	DataType string
+	//DateFormat is the format of the date type if column's data type is date
+	DateFormat string
+}
+
 //Datastore can store data uploaded/imported by the user to cuttle platform
 type Datastore interface {
 	//DumpCSV will dump the given csv file to the datastore.
@@ -21,4 +31,8 @@ type Datastore interface {
 	DeleteTable(tablename string) error
 	//Exec can execute a query and return the response as the array of interfaces
 	Exec(query string, args ...interface{}) ([]map[string]interface{}, error)
+	//GetColumnTypes returns the list of columns and their data types for a given table
+	GetColumnTypes(tableName string) ([]Column, error)
+	//ChangeColumnTypeToDate changes the data type of the given column to date with the provided date format
+	ChangeColumnTypeToDate(tableName string, colName string, dateFormat string) error
 }

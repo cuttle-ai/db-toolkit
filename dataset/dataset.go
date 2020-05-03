@@ -12,6 +12,7 @@ import (
 
 	"github.com/cuttle-ai/brain/log"
 	"github.com/cuttle-ai/brain/models"
+	toolkit "github.com/cuttle-ai/db-toolkit"
 	"github.com/cuttle-ai/db-toolkit/datastores/services"
 	"github.com/cuttle-ai/octopus/interpreter"
 	"github.com/jinzhu/gorm"
@@ -21,7 +22,7 @@ import (
 func IdentifyDimensions(l log.Log, conn *gorm.DB, cols []models.Node, table models.Node, dSer services.Service, dt *models.Dataset) error {
 	/*
 	 * we will first get the columns that are not of the type dimension
-	 * We will get the datastore in which the table is store in
+	 * We will get the datastore in which the table is stored in
 	 * Then we will iterate through the columns
 	 *		and check the number of unique values the column is holding.
 	 * 		based that we will update the dimension type
@@ -89,8 +90,93 @@ func IdentifyDimensions(l log.Log, conn *gorm.DB, cols []models.Node, table mode
 	return nil
 }
 
-//IdentifyDates will identify the dates in the datsets and update the same in the db
-func IdentifyDates(l log.Log, conn *gorm.DB, cols []models.Node, table models.Node) error {
+//ConvertDates will identify the dates in the datsets and update the same in the db
+func ConvertDates(l log.Log, conn *gorm.DB, cols []models.Node, table models.Node, dSer services.Service, dt *models.Dataset) error {
+	/*
+	 * We will first get the columns having date data type
+	 * We will get the datastore in which the table is stored in
+	 * Then we will get the datatype of the columns in db
+	 * If the data type in db is different, then we will change the data type
+	 * The we will update the table's default date field if not available with one
+	 */
+	//getting the columns having the date data type
+	tN := table.TableNode()
+	l.Info("going to convert the date columns in the dataset from string to date", tN.Name)
+	columns := []interpreter.ColumnNode{}
+	colMap := map[string]interpreter.ColumnNode{}
+	for _, v := range cols {
+		iN := v.ColumnNode()
+		colMap[iN.Name] = iN
+		if iN.DataType == interpreter.DataTypeDate {
+			columns = append(columns, iN)
+		}
+	}
+	if len(columns) == 0 {
+		return nil
+	}
+
+	l.Info("have", len(columns), "to that are of date type in", tN.Name)
+	//getting the datastore
+	dStore, err := dSer.Datastore()
+	if err != nil {
+		//error while getting the datastore
+		l.Error("error while getting the datastore", dSer.ID)
+		return err
+	}
+
+	//getting the column data types
+	colTypes, err := dStore.GetColumnTypes(tN.Name)
+	if err != nil {
+		//error while getting the column data types
+		l.Error("error while getting the datatypes of the columns of tha table", tN.Name)
+		return err
+	}
+
+	//checking the cols with different data type
+	toBeChanged := []toolkit.Column{}
+	for _, v := range colTypes {
+		colNode, ok := colMap[v.Name]
+		if !ok {
+			continue
+		}
+		if colNode.DataType == interpreter.DataTypeDate && v.DataType == interpreter.DataTypeString {
+			v.DateFormat = colNode.DateFormat
+			v.DataType = interpreter.DataTypeDate
+			toBeChanged = append(toBeChanged, v)
+		}
+	}
+	l.Info(len(toBeChanged), "columns havbe the datatypes to be changed from text to date in", tN.Name)
+
+	//if the len of columns to be changed is zero, don't go forward
+	if len(toBeChanged) == 0 {
+		return nil
+	}
+	for _, v := range toBeChanged {
+		err := dStore.ChangeColumnTypeToDate(tN.Name, v.Name, v.DateFormat)
+		if err != nil {
+			//error while converting the data type of the column
+			l.Error("error while converting the data type to date for the column", v.Name, tN.Name)
+			return err
+		}
+	}
+	l.Info("altered the column types from text to date", tN.Name)
+
+	//now we update the first column as default date
+	if len(tN.DefaultDateFieldUID) != 0 {
+		//we already have a default date field
+		return nil
+	}
+	colNode := colMap[toBeChanged[0].Name]
+	l.Info("updating the default date column of the table", tN.Name, "to", colNode.Name)
+	tN.DefaultDateField = &colNode
+	tN.DefaultDateFieldUID = colNode.UID
+	_, err = dt.UpdateTable(conn, table.FromTable(tN))
+	if err != nil {
+		//error while updating the table with default date
+		l.Error("error while updating the table with default date", colNode.Name, tN.Name)
+		return err
+	}
+
 	return nil
 }
 
@@ -103,7 +189,7 @@ func OptimizeDatasetMetadata(l log.Log, conn *gorm.DB, id uint, dSer services.Se
 	 * Then we will get the columns in the dataset
 	 * Then we will get the table in the dataset
 	 * Then we will identify the dimensions in the dataset
-	 * Then we will identify the dates in the dataset
+	 * Then we will convert the dates in the dataset
 	 */
 	dt := &models.Dataset{Model: gorm.Model{ID: id}, UserID: userID}
 	l.Info("going to optimize the dataset metadata for", dt.ID)
@@ -140,11 +226,11 @@ func OptimizeDatasetMetadata(l log.Log, conn *gorm.DB, id uint, dSer services.Se
 		return err
 	}
 
-	//identify the dates in the dataset
-	err = IdentifyDates(l, conn, cols, table)
+	//convert the dates in the dataset
+	err = ConvertDates(l, conn, cols, table, dSer, dt)
 	if err != nil {
-		//error while identifying the date columns in the dataset
-		l.Error("error while identifying the date columns in the dataset")
+		//error while converting the date columns in the dataset
+		l.Error("error while converting the date columns in the dataset")
 		return err
 	}
 
