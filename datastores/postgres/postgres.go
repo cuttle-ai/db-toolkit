@@ -89,7 +89,7 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 	 */
 	//copying the file to the remote
 	logger.Info("copying the file to remote postgres server", p.DataDumpDirectory)
-	cm := exec.Command("scp", filename, p.DataDumpDirectory+"/"+tablename+".csv")
+	cm := exec.Command("scp", "-o", "StrictHostKeyChecking=no", filename, p.DataDumpDirectory+"/"+tablename+".csv")
 	err := cm.Run()
 	if err != nil {
 		logger.Error("error copying the file for dumping csv to the datastore", filename, "to", p.DataDumpDirectory)
