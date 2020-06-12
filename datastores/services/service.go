@@ -64,7 +64,7 @@ func (s Service) Validate() error {
 	}
 	_, err := strconv.ParseInt(s.Port, 10, 32)
 	if err != nil {
-		return errors.New("Port should be a valid number")
+		return errors.New("Port should be a valid number got " + s.Port)
 	}
 	if len(s.Username) == 0 {
 		return errors.New("Username can't be empty")
