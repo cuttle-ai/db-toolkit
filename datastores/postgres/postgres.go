@@ -54,9 +54,8 @@ func convertToPostgresDataType(dataType string, maskDate bool) string {
 	case interpreter.DataTypeDate:
 		if maskDate {
 			return "text"
-		} else {
-			return "date"
 		}
+		return "date"
 	default:
 		return "text"
 	}
