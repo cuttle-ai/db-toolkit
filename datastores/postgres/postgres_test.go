@@ -38,7 +38,7 @@ func TestDumpCSV(t *testing.T) {
 		{Name: "item"},
 		{Name: "brand"},
 		{Name: "quantity", DataType: interpreter.DataTypeInt},
-	}, false, true, l)
+	}, false, true, true, l)
 
 	if err != nil {
 		//error while dumping csv

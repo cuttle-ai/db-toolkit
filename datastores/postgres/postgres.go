@@ -78,7 +78,7 @@ func convertFromPostgresDataType(dataType string) string {
 }
 
 //DumpCSV will dump the given csv file to post instance
-func (p Postgres) DumpCSV(filename string, tablename string, columns []interpreter.ColumnNode, appendData bool, createTable bool, logger log.Log) error {
+func (p Postgres) DumpCSV(filename string, tablename string, columns []interpreter.ColumnNode, appendData bool, createTable bool, doScp bool, logger log.Log) error {
 	/*
 	 * We will copy the file to the remote
 	 * We will start a transaction for the db operation
@@ -89,7 +89,13 @@ func (p Postgres) DumpCSV(filename string, tablename string, columns []interpret
 	 */
 	//copying the file to the remote
 	logger.Info("copying the file to remote postgres server", p.DataDumpDirectory)
-	cm := exec.Command("scp", "-o", "StrictHostKeyChecking=no", filename, p.DataDumpDirectory+"/"+tablename+".csv")
+	cmdName := "cp"
+	args := []string{filename, p.DataDumpDirectory + "/" + tablename + ".csv"}
+	if doScp {
+		cmdName = "scp"
+		args = []string{"-o", "StrictHostKeyChecking=no", filename, p.DataDumpDirectory + "/" + tablename + ".csv"}
+	}
+	cm := exec.Command(cmdName, args...)
 	err := cm.Run()
 	if err != nil {
 		logger.Error("error copying the file for dumping csv to the datastore", filename, "to", p.DataDumpDirectory)
